@@ -46,17 +46,16 @@ export async function fitTileBounds(map: maplibregl.Map, tileIndex: TileIndex, t
 }
 
 async function isIdleOrTimeout(map: maplibregl.Map, timeout: number): Promise<{ didTimeout: boolean }> {
-
   return new Promise((resolve) => {
-    // TODO: remove this event in the setTimeout
-    map.once('idle', () => {
+    const resolveWhenIdle = () => {
       resolve({ didTimeout: false })
-    })
+    }
+    map.on('idle', resolveWhenIdle)
 
     setTimeout(() => {
+      map.off('idle', resolveWhenIdle)
       resolve({ didTimeout: true })
     }, timeout)
-
   })
 }
 

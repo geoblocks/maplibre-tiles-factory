@@ -7,20 +7,7 @@ import { fitTileBounds, getImageAsPixelData, getImageAsPngObjectURL, wrapTileInd
 import type { TileIndex } from "../lib/types";
 
 
-function createMapContainer(): HTMLDivElement {
-  const container = document.createElement('div')
-  container.id = '_maplibre-tiles-factory-container_'
-  container.style.setProperty('width', '512px')
-  container.style.setProperty('height', '512px')
-  container.style.setProperty('top', '-1000px')
-  container.style.setProperty('left', '-1000px')
-  // container.style.setProperty('bottom', '0')
-  // container.style.setProperty('right', '0')
-  container.style.setProperty('position', 'fixed')
 
-  document.body.append(container)
-  return container
-}
 
 export async function basicDemo() {
   const snapButton = document.getElementById('snap-bt') as HTMLButtonElement
