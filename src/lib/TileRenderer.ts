@@ -58,7 +58,7 @@ export class TileRenderer {
       container: createMapContainer(),
       hash: false,
       style: style,
-      pixelRatio: 2,
+      pixelRatio: 6,
       canvasContextAttributes: {
         preserveDrawingBuffer: true,
         antialias: false,
@@ -66,7 +66,7 @@ export class TileRenderer {
     })
 
     // TODO: remove
-    this.map.showTileBoundaries = true
+    this.map.showTileBoundaries = false
   }
 
   on<T extends ImageFormat>(type: 'start' | 'finish', handler: (event: CustomEvent<{ tileRenderer: TileRenderer, tileIndex: TileIndex, tileImage: ImageFormatMap[T] | null }>) => void) {

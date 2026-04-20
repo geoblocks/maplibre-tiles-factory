@@ -60,16 +60,21 @@ export async function basicDemo() {
 
 
   debugButton.addEventListener('pointerup', async () => {
-    
+    snapContainer.innerHTML = ''
     let total = 0
     let done = 0
     const z = 7
+
+    const n = 5
+
     console.time('chrono')
-    for (let x = 62; x < 68; x += 1) {
-      for (let y = 43; y < 49; y += 1) {
+    // for (let x = 62; x < 68; x += 1) {
+    //   for (let y = 43; y < 49; y += 1) {
+        
+    for (let x = 62; x < 62 + n; x += 1) {
+      for (let y = 43; y < 43 + n; y += 1) {
+
         total += 1
-    // for (let x = 62; x < 70; x += 1) {
-    //   for (let y = 43; y < 48; y += 1) {
 
         tileFactory.requestTile< 'PngObjectUrl' >({z, x, y})
         .then((res) => {
@@ -123,7 +128,7 @@ export async function basicDemo() {
     }
   })
 
-  const tileFactory = new TileFactory(style, { imageFormat: 'PngObjectUrl', numberOfRenderers: 4 })
+  const tileFactory = new TileFactory(style, { imageFormat: 'PngObjectUrl', numberOfRenderers: 6, timeout: 30000 })
 
   // tileRenderer.setShowTileBoundaries(true)
   // await new Promise((resolve) => map.on("load", resolve))
