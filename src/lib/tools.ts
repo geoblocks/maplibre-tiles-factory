@@ -1,4 +1,4 @@
-import type { PixelData, TileIndex } from "./types";
+import type { TileIndex } from "./types";
 
 export function wrapTileIndex(tileIndex: TileIndex): TileIndex | null {
   if (tileIndex.z < 0) {
@@ -31,111 +31,21 @@ export function getTileBounds(tileIndex: TileIndex): {lngMin: number, latMin: nu
   return { lngMin, latMin, lngMax, latMax }
 }
 
-export async function fitTileBounds(map: maplibregl.Map, tileIndex: TileIndex, timeout = 1000) {
-  const tileBounds = getTileBounds(tileIndex)
 
-  map.fitBounds([
-    [tileBounds.lngMin, tileBounds.latMin],
-    [tileBounds.lngMax, tileBounds.latMax]
-  ], {
-    duration: 0,
-  });
-
-  await isIdleOrTimeout(map, timeout)
-
-}
-
-async function isIdleOrTimeout(map: maplibregl.Map, timeout: number): Promise<{ didTimeout: boolean }> {
-  return new Promise((resolve) => {
-    const resolveWhenIdle = () => {
-      resolve({ didTimeout: false })
-    }
-    map.on('idle', resolveWhenIdle)
-
-    setTimeout(() => {
-      map.off('idle', resolveWhenIdle)
-      resolve({ didTimeout: true })
-    }, timeout)
-  })
-}
-
-function allSourcesLoaded(map: maplibregl.Map): boolean {
-  const style = map.getStyle()
-  const sourceIds = Object.keys(style.sources)
-  return sourceIds.filter(id => !map.isSourceLoaded(id)).length === 0
-}
-
-export function getUnloadedSource(map: maplibregl.Map): string[] {
-  const style = map.getStyle()
-  const sourceIds = Object.keys(style.sources)
-  return sourceIds.filter(id => !map.isSourceLoaded(id))
+export function tileIndexToTileId(tileIndex: TileIndex): string {
+  return `${tileIndex.z}_${tileIndex.x}_${tileIndex.y}`
 }
 
 
-
-export function getImageAsPixelData(map: maplibregl.Map): PixelData {
-  const canvas = map.getCanvas()
-  const gl = canvas.getContext('webgl2')
-  const pixelData = new Uint8Array(canvas.width * canvas.height * 4)
-  gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixelData)
-  return { data: pixelData, width: canvas.width, height: canvas.height }
-}
-
-export function getImageAsImageData(map: maplibregl.Map): ImageData {
-  const pixelData = getImageAsPixelData(map)
-  const imageData = new ImageData(pixelData.width, pixelData.height)
-  imageData.data.set(pixelData.data)
-  return imageData
-}
-
-export async function getImageAsImageBitmap(map: maplibregl.Map): Promise<ImageBitmap> {
-  const imageData = getImageAsImageData(map)
-  return createImageBitmap(imageData)
-}
-
-export function getImageAsOffscreenCanvas(map: maplibregl.Map): OffscreenCanvas {
-  const imageData = getImageAsImageData(map)
-  const canvas = new OffscreenCanvas(imageData.width, imageData.height)
-  const ctx = canvas.getContext("2d")
-  ctx.putImageData(imageData, 0, 0)
-  return canvas
-}
-
-export async function getImageAsPngBlob(map: maplibregl.Map): Promise<Blob | null> {
-  return new Promise((resolve, reject) => {
-    map.getCanvas().toBlob((blob) => {
-      if (!blob) {
-        reject(Error("Screenshot could not be created."))
-        return
-      }
-      resolve(blob)
-    }, "image/png")
-  })
-}
-
-export async function getImageAsPngBuffer(map: maplibregl.Map): Promise<ArrayBuffer | null> {
-  const blob = await getImageAsPngBlob(map)
-
-  if (!blob) {
-    console.warn("The PNG blob could not be created.")
-    return null
+export function tileIdToTileIndex(id: string): TileIndex {
+  const splitted = id.split('_')
+  return {
+    z: Number.parseInt(splitted[0]),
+    x: Number.parseInt(splitted[1]),
+    y: Number.parseInt(splitted[2]),
   }
-
-  const pngBuffer = await blob.arrayBuffer()
-  return pngBuffer
 }
 
-
-export async function getImageAsPngObjectURL(map: maplibregl.Map): Promise<{ url: string, revoke: () => void } | null> {
-  const blob = await getImageAsPngBlob(map)
-
-  if (!blob) {
-    console.warn("The PNG blob could not be created.")
-    return null
-  }
-
-  const url = URL.createObjectURL(blob)
-  const revoke = () => URL.revokeObjectURL(url)
-  return { url, revoke }
+export function isSameTileIndex(ti1: TileIndex, ti2: TileIndex): boolean {
+  return ti1.z === ti2.z && ti1.x === ti2.x && ti1.y === ti2.y
 }
-

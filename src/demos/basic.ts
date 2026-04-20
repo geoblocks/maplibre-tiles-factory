@@ -3,14 +3,17 @@ import maplibregl from "maplibre-gl";
 import { getStyle } from "basemapkit";
 import { Protocol } from "pmtiles";
 import { pmtiles, sprite, glyphs, lang, pmtilesTerrain, terrainEncoding } from "./constants";
-import { fitTileBounds, getImageAsPixelData, getImageAsPngObjectURL, wrapTileIndex } from "../lib/tools";
+import { wrapTileIndex } from "../lib/tools";
 import type { TileIndex } from "../lib/types";
+import { TileFactory } from "../lib/TileFactory";
+import type { ImageFormatMap } from "../lib/TileRenderer";
 
 
 
 
 export async function basicDemo() {
   const snapButton = document.getElementById('snap-bt') as HTMLButtonElement
+  const debugButton = document.getElementById('debug-bt') as HTMLButtonElement
   const snapContainer = document.getElementById('snap-container') as HTMLDivElement
   if (!snapButton) return
   if (!snapContainer) return
@@ -47,27 +50,60 @@ export async function basicDemo() {
   snapButton.addEventListener('pointerup', async () => {
     if (!tileIndex) return
 
-    map.showTileBoundaries = false
-
-    console.time("fit map")
-    await fitTileBounds(map, tileIndex)
-    console.timeEnd("fit map")
-
-    // console.time("get pixel data")
-    // getImageAsPixelData(map)
-    // console.timeEnd("get pixel data")
-
     console.time("create object URL")
-    
-    const {url, revoke } = await getImageAsPngObjectURL(map)
-    map.showTileBoundaries = true
-    console.timeEnd("create object URL")
-    
   
+    const res = await tileFactory.requestTile< 'PngObjectUrl' >(tileIndex)
     const img = document.createElement('img')
-    img.src = url
-
+    img.src = res.url
     snapContainer.append(img)
+  })
+
+
+  debugButton.addEventListener('pointerup', async () => {
+    
+    let total = 0
+    let done = 0
+    const z = 7
+    console.time('chrono')
+    for (let x = 62; x < 68; x += 1) {
+      for (let y = 43; y < 49; y += 1) {
+        total += 1
+    // for (let x = 62; x < 70; x += 1) {
+    //   for (let y = 43; y < 48; y += 1) {
+
+        tileFactory.requestTile< 'PngObjectUrl' >({z, x, y})
+        .then((res) => {
+          done += 1
+          const img = document.createElement('img')
+          img.src = res.url
+          img.alt = `${z}/${x}/${y}`
+          snapContainer.append(img)
+
+          console.log('done: ', done, '/', total);
+
+          if (done === total) {
+            console.timeEnd('chrono')
+          }
+          
+        })
+        
+      }
+    }
+
+    // console.time("generate")
+    // const res = await Promise.allSettled(proms)
+    // console.timeEnd("generate")
+    // console.log(res);
+
+    // for (const p of res) {
+    //   if (p.status !== 'fulfilled') {
+    //     continue
+    //   }
+
+    //   const img = document.createElement('img')
+    //   img.src = p.value.url
+    //   snapContainer.append(img)
+    // }
   })
   
 
@@ -87,47 +123,11 @@ export async function basicDemo() {
     }
   })
 
-  const map = new maplibregl.Map({
-    container: createMapContainer(),
-    hash: false,
-    zoom: 4,
-    center: [27.35, 38.92],
-    style: style,
-    maxPitch: 89,
-    pixelRatio: 2,
-    canvasContextAttributes: {
-      preserveDrawingBuffer: true,
-      antialias: false,
-    }
-  })
+  const tileFactory = new TileFactory(style, { imageFormat: 'PngObjectUrl', numberOfRenderers: 4 })
 
-  map.showTileBoundaries = true
+  // tileRenderer.setShowTileBoundaries(true)
   // await new Promise((resolve) => map.on("load", resolve))
 
-
-  map.on('sourcedataabort', () => {
-    console.log('event sourcedataabort');
-  })
-
-  map.on('dataabort', () => {
-    console.log('event dataabort');
-  })
-
-  map.on('error', () => {
-    console.log('event error');
-  })
-
-  map.on('styledataloading', () => {
-    console.log('event styledataloading');
-  })
-
-  map.on('styledata', () => {
-    console.log('event styledata');
-  })
-
-  // map.on('sourcedataloading', () => {
-  //   console.log('event sourcedataloading');
-  // })
 
   
 }
