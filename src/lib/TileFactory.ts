@@ -110,15 +110,27 @@ export class TileFactory {
     tileRenderer.renderTile(tileIndex, this.imageFormat, this.timeout);
   }
 
-  requestTile<T extends ImageFormat>(tileIndex: TileIndex): Promise<ImageFormatMap[T] | null> {
+  /**
+   * Discard all tiles currently waiting in the queue.
+   * Tiles already being rendered are not affected.
+   */
+  cancelAllQueued() {
+    this.queue.clear();
+  }
+
+  requestTile<T extends ImageFormat>(tileIndex: TileIndex, signal?: AbortSignal): Promise<ImageFormatMap[T] | null> {
     const wrappedTileIndex = wrapTileIndex(tileIndex);
     if (!wrappedTileIndex) {
       return Promise.resolve(null);
     }
 
+    if (signal?.aborted) {
+      return Promise.resolve(null);
+    }
+
     this.queue.enqueue(wrappedTileIndex);
 
-    const tileImagePromise = new Promise<ImageFormatMap[T]>((resolve) => {
+    const tileImagePromise = new Promise<ImageFormatMap[T] | null>((resolve) => {
       const removeEventFunc = this.on("finish", (e) => {
         const finishedTileIndex = e.detail.tileIndex;
 
@@ -127,6 +139,18 @@ export class TileFactory {
           resolve(e.detail.tileImage as ImageFormatMap[T]);
         }
       });
+
+      signal?.addEventListener(
+        "abort",
+        () => {
+          // Still in queue: remove it so no renderer picks it up.
+          this.queue.remove(wrappedTileIndex);
+          // Already rendering: the finish event will never come for us, so resolve null.
+          removeEventFunc();
+          resolve(null);
+        },
+        { once: true },
+      );
     });
 
     this.tryRenderTile();

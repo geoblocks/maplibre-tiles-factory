@@ -29,6 +29,13 @@ export class Queue {
     this.s.delete(tileIndexToTileId(tileIndex));
   }
 
+  /**
+   * Remove all TileIndexes from the queue
+   */
+  clear() {
+    this.s.clear();
+  }
+
   get size() {
     return this.s.size;
   }

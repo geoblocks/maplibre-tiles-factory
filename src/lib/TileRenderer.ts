@@ -1,6 +1,7 @@
 import maplibregl from "maplibre-gl";
 import type { PixelData, TileIndex } from "./types";
 import { getTileBounds } from "./tools";
+import "ol/ol.css";
 
 const SYSTEM_TILE_SIZE = 512;
 
@@ -142,7 +143,23 @@ export class TileRenderer {
 
     const pixelData = new Uint8Array(canvas.width * canvas.height * 4);
     gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixelData);
-    return { data: pixelData, width: canvas.width, height: canvas.height };
+
+    // WebGL readback starts from the bottom row; flip to top-left image orientation.
+    const flippedPixelData = this.flipPixelRows(pixelData, canvas.width, canvas.height);
+    return { data: flippedPixelData, width: canvas.width, height: canvas.height };
+  }
+
+  private flipPixelRows(pixelData: Uint8Array, width: number, height: number): Uint8Array {
+    const bytesPerRow = width * 4;
+    const flipped = new Uint8Array(pixelData.length);
+
+    for (let y = 0; y < height; y += 1) {
+      const sourceOffset = y * bytesPerRow;
+      const targetOffset = (height - 1 - y) * bytesPerRow;
+      flipped.set(pixelData.subarray(sourceOffset, sourceOffset + bytesPerRow), targetOffset);
+    }
+
+    return flipped;
   }
 
   private getImageAsImageData(): ImageData {
