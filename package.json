@@ -27,17 +27,22 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "build:lib": "rm -rf ./dist-lib/* && tsc && vite build -c vite.config-lib.ts",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "biome": "biome check --max-diagnostics=1000",
+    "biome:fix": "biome check --max-diagnostics=1000 --write",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
+    "basemapkit": "^0.5.1",
+    "husky": "^9.1.7",
+    "pmtiles": "^4.4.1",
     "typescript": "~6.0.2",
     "vite": "^8.0.4",
-    "vite-plugin-dts": "^5.0.0",
-    "basemapkit": "^0.5.1",
-    "pmtiles": "^4.4.1"
+    "vite-plugin-dts": "^5.0.0"
   },
   "dependencies": {
+    "@biomejs/biome": "^2.4.14",
     "maplibre-gl": "^5.23.0"
   }
 }
