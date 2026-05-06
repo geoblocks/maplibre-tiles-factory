@@ -1,0 +1,10 @@
+src
+public
+index.html
+biome.json
+.github
+dist
+resources
+.husky
+vite.config-lib.ts
+tsconfig.json

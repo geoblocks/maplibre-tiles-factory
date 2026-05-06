@@ -30,6 +30,7 @@
     "preview": "vite preview",
     "biome": "biome check --max-diagnostics=1000",
     "biome:fix": "biome check --max-diagnostics=1000 --write",
+    "prepack": "npm run biome && npm run build:lib",
     "prepare": "husky"
   },
   "devDependencies": {
