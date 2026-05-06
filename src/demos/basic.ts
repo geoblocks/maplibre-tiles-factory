@@ -3,89 +3,113 @@ import maplibregl from "maplibre-gl";
 import { getStyle } from "basemapkit";
 import { Protocol } from "pmtiles";
 import { pmtiles, sprite, glyphs, lang, pmtilesTerrain, terrainEncoding } from "./constants";
-import { fitTileBounds, getImageAsPixelData, getImageAsPngObjectURL, wrapTileIndex } from "../lib/tools";
-import type { TileIndex } from "../lib/types";
-
-
-function createMapContainer(): HTMLDivElement {
-  const container = document.createElement('div')
-  container.id = '_maplibre-tiles-factory-container_'
-  container.style.setProperty('width', '512px')
-  container.style.setProperty('height', '512px')
-  container.style.setProperty('top', '-1000px')
-  container.style.setProperty('left', '-1000px')
-  // container.style.setProperty('bottom', '0')
-  // container.style.setProperty('right', '0')
-  container.style.setProperty('position', 'fixed')
-
-  document.body.append(container)
-  return container
-}
+import { wrapTileIndex } from "../lib";
+import type { TileIndex } from "../lib";
+import { TileFactory } from "../lib";
 
 export async function basicDemo() {
-  const snapButton = document.getElementById('snap-bt') as HTMLButtonElement
-  const snapContainer = document.getElementById('snap-container') as HTMLDivElement
-  if (!snapButton) return
-  if (!snapContainer) return
+  const snapButton = document.getElementById("snap-bt") as HTMLButtonElement;
+  const debugButton = document.getElementById("debug-bt") as HTMLButtonElement;
+  const snapContainer = document.getElementById("snap-container") as HTMLDivElement;
+  if (!snapButton) return;
+  if (!snapContainer) return;
 
-  let tileIndex: TileIndex
+  let tileIndex: TileIndex | undefined;
 
-  document.getElementById('tile-index-input').addEventListener('input', ({target}) => {
-    const value = (target as HTMLInputElement).value
-    const members = value.split('/').map((el) => Number.parseInt(el))
-    tileIndex = undefined
+  document.getElementById("tile-index-input")?.addEventListener("input", ({ target }) => {
+    const value = (target as HTMLInputElement).value;
+    const members = value.split("/").map((el) => Number.parseInt(el, 10));
+    tileIndex = undefined;
 
     if (members.length !== 3) {
-      snapButton.disabled = true
-      return
+      snapButton.disabled = true;
+      return;
     }
 
     if (members.some((el) => Number.isNaN(el))) {
-      snapButton.disabled = true
-      return
+      snapButton.disabled = true;
+      return;
     }
 
-    const wrappedTileIndex = wrapTileIndex({ z: members[0], x: members[1], y: members[2] })
+    const wrappedTileIndex = wrapTileIndex({ z: members[0], x: members[1], y: members[2] });
 
     if (!wrappedTileIndex) {
-      snapButton.disabled = true
-      return
+      snapButton.disabled = true;
+      return;
     }
 
-    tileIndex = wrappedTileIndex
-    snapButton.disabled = false
-  })
+    tileIndex = wrappedTileIndex;
+    snapButton.disabled = false;
+  });
 
+  snapButton.addEventListener("pointerup", async () => {
+    if (!tileIndex) return;
 
-  snapButton.addEventListener('pointerup', async () => {
-    if (!tileIndex) return
+    console.time("create object URL");
 
-    map.showTileBoundaries = false
+    const res = await tileFactory.requestTile<"PngObjectUrl">(tileIndex);
+    const img = document.createElement("img");
 
-    console.time("fit map")
-    await fitTileBounds(map, tileIndex)
-    console.timeEnd("fit map")
+    if (!res) {
+      img.alt = "Tile index out of range";
+      snapContainer.append(img);
+      return;
+    }
+    img.src = res.url;
+    snapContainer.append(img);
+  });
 
-    // console.time("get pixel data")
-    // getImageAsPixelData(map)
-    // console.timeEnd("get pixel data")
+  debugButton.addEventListener("pointerup", async () => {
+    snapContainer.innerHTML = "";
+    let total = 0;
+    let done = 0;
+    const z = 7;
 
-    console.time("create object URL")
-    
-    const {url, revoke } = await getImageAsPngObjectURL(map)
-    map.showTileBoundaries = true
-    console.timeEnd("create object URL")
-    
-  
-    const img = document.createElement('img')
-    img.src = url
+    const n = 5;
 
-    snapContainer.append(img)
-  })
-  
+    console.time("chrono");
+    // for (let x = 62; x < 68; x += 1) {
+    //   for (let y = 43; y < 49; y += 1) {
+
+    for (let x = 62; x < 62 + n; x += 1) {
+      for (let y = 43; y < 43 + n; y += 1) {
+        total += 1;
+
+        tileFactory.requestTile<"PngObjectUrl">({ z, x, y }).then((res) => {
+          done += 1;
+          if (!res) return;
+          const img = document.createElement("img");
+          img.src = res.url;
+          img.alt = `${z}/${x}/${y}`;
+          snapContainer.append(img);
+
+          console.log("done: ", done, "/", total);
+
+          if (done === total) {
+            console.timeEnd("chrono");
+          }
+        });
+      }
+    }
+
+    // console.time("generate")
+    // const res = await Promise.allSettled(proms)
+    // console.timeEnd("generate")
+    // console.log(res);
+
+    // for (const p of res) {
+    //   if (p.status !== 'fulfilled') {
+    //     continue
+    //   }
+
+    //   const img = document.createElement('img')
+    //   img.src = p.value.url
+    //   snapContainer.append(img)
+    // }
+  });
 
   maplibregl.addProtocol("pmtiles", new Protocol().tile);
-  
+
   const style = getStyle("avenue", {
     pmtiles,
     sprite,
@@ -97,50 +121,13 @@ export async function basicDemo() {
       pmtiles: pmtilesTerrain,
       hillshading: true,
       encoding: terrainEncoding,
-    }
-  })
+    },
+  });
 
-  const map = new maplibregl.Map({
-    container: createMapContainer(),
-    hash: false,
-    zoom: 4,
-    center: [27.35, 38.92],
-    style: style,
-    maxPitch: 89,
-    pixelRatio: 2,
-    canvasContextAttributes: {
-      preserveDrawingBuffer: true,
-      antialias: false,
-    }
-  })
-
-  map.showTileBoundaries = true
-  // await new Promise((resolve) => map.on("load", resolve))
-
-
-  map.on('sourcedataabort', () => {
-    console.log('event sourcedataabort');
-  })
-
-  map.on('dataabort', () => {
-    console.log('event dataabort');
-  })
-
-  map.on('error', () => {
-    console.log('event error');
-  })
-
-  map.on('styledataloading', () => {
-    console.log('event styledataloading');
-  })
-
-  map.on('styledata', () => {
-    console.log('event styledata');
-  })
-
-  // map.on('sourcedataloading', () => {
-  //   console.log('event sourcedataloading');
-  // })
-
-  
+  const tileFactory = new TileFactory(style, {
+    imageFormat: "PngObjectUrl",
+    numberOfRenderers: 6,
+    tileSize: 1000,
+    timeout: 30000,
+  });
 }

@@ -1,4 +1,4 @@
-# MapLibre Tiles Factory
+# MapLibre Tile Factory
 
 Use MapLibre to produce raster tiles, for any tilegrid.
 The produced tiles can be used with any library: OpenLayers, CesiumJS, You-Name-It.
