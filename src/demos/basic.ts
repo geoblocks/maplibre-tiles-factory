@@ -3,12 +3,9 @@ import maplibregl from "maplibre-gl";
 import { getStyle } from "basemapkit";
 import { Protocol } from "pmtiles";
 import { pmtiles, sprite, glyphs, lang, pmtilesTerrain, terrainEncoding } from "./constants";
-import { wrapTileIndex } from "../lib/tools";
-import type { TileIndex } from "../lib/types";
-import { TileFactory } from "../lib/TileFactory";
-import type { ImageFormatMap } from "../lib/TileRenderer";
-
-
+import { wrapTileIndex } from "../lib";
+import type { TileIndex } from "../lib";
+import { TileFactory } from "../lib";
 
 
 export async function basicDemo() {
@@ -18,9 +15,9 @@ export async function basicDemo() {
   if (!snapButton) return
   if (!snapContainer) return
 
-  let tileIndex: TileIndex
+  let tileIndex: TileIndex | undefined = undefined
 
-  document.getElementById('tile-index-input').addEventListener('input', ({target}) => {
+  document.getElementById('tile-index-input')?.addEventListener('input', ({target}) => {
     const value = (target as HTMLInputElement).value
     const members = value.split('/').map((el) => Number.parseInt(el))
     tileIndex = undefined
@@ -54,6 +51,12 @@ export async function basicDemo() {
   
     const res = await tileFactory.requestTile< 'PngObjectUrl' >(tileIndex)
     const img = document.createElement('img')
+
+    if (!res) {
+      img.alt = 'Tile index out of range'
+      snapContainer.append(img)
+      return
+    }
     img.src = res.url
     snapContainer.append(img)
   })
@@ -79,6 +82,7 @@ export async function basicDemo() {
         tileFactory.requestTile< 'PngObjectUrl' >({z, x, y})
         .then((res) => {
           done += 1
+          if (!res) return
           const img = document.createElement('img')
           img.src = res.url
           img.alt = `${z}/${x}/${y}`
@@ -128,11 +132,8 @@ export async function basicDemo() {
     }
   })
 
-  const tileFactory = new TileFactory(style, { imageFormat: 'PngObjectUrl', numberOfRenderers: 6, timeout: 30000 })
+  const tileFactory = new TileFactory(style, { imageFormat: 'PngObjectUrl', numberOfRenderers: 6, tileSize: 1000, timeout: 30000 })
 
-  // tileRenderer.setShowTileBoundaries(true)
-  // await new Promise((resolve) => map.on("load", resolve))
-
-
-  
 }
+
+

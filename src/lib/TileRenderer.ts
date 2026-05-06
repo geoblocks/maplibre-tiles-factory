@@ -2,6 +2,8 @@ import maplibregl from "maplibre-gl"
 import type { PixelData, TileIndex } from "./types"
 import { getTileBounds } from "./tools"
 
+const SYSTEM_TILE_SIZE = 512
+
 export type ImageFormatMap = {
   PixelData: PixelData,
   ImageData: ImageData,
@@ -12,33 +14,21 @@ export type ImageFormatMap = {
   PngObjectUrl: { url: string, revoke: () => void },
 }
 
+export type TileRendererOptions = {
+  tileSize?: number,
+}
+
 export type ImageFormat = keyof ImageFormatMap
-
-
 
 let tileRendererCounter = 0
 
 function createMapContainer(): HTMLDivElement {
   const container = document.createElement('div')
-  container.style.setProperty('width', '512px')
-    container.style.setProperty('height', '512px')
+  container.style.setProperty('width', `${SYSTEM_TILE_SIZE}px`)
+  container.style.setProperty('height', `${SYSTEM_TILE_SIZE}px`)
 
-  // if (tileRendererCounter === 0) {
-  //   container.style.setProperty('bottom', '0')
-  //   container.style.setProperty('right', '0')
-  // } else if (tileRendererCounter === 1) {
-  //   container.style.setProperty('top', '0')
-  //   container.style.setProperty('right', '0')
-  // } else if (tileRendererCounter === 2) {
-  //   container.style.setProperty('bottom', '0')
-  //   container.style.setProperty('left', '0')
-  // } else {
-  //   container.style.setProperty('bottom', '512')
-  //   container.style.setProperty('right', '512')
-  // }
-
-  container.style.setProperty('top', '-1000px')
-  container.style.setProperty('left', '-1000px')
+  container.style.setProperty('top', '-5000px')
+  container.style.setProperty('left', '-5000px')
 
   container.id = `_maplibre-tile-factory-container-${tileRendererCounter++}_`
   container.style.setProperty('position', 'fixed')
@@ -52,13 +42,16 @@ export class TileRenderer {
   private idle: boolean
   private readonly events = new EventTarget()
 
-  constructor(style: maplibregl.StyleSpecification) {
+  constructor(style: maplibregl.StyleSpecification, options: TileRendererOptions = {}) {
+    const tileSize = options.tileSize ?? SYSTEM_TILE_SIZE
+    const devicePixelRatio = tileSize / SYSTEM_TILE_SIZE
+
     this.idle = true
     this.map = new maplibregl.Map({
       container: createMapContainer(),
       hash: false,
       style: style,
-      pixelRatio: 6,
+      pixelRatio: devicePixelRatio,
       canvasContextAttributes: {
         preserveDrawingBuffer: true,
         antialias: false,
@@ -70,16 +63,16 @@ export class TileRenderer {
   }
 
   on<T extends ImageFormat>(type: 'start' | 'finish', handler: (event: CustomEvent<{ tileRenderer: TileRenderer, tileIndex: TileIndex, tileImage: ImageFormatMap[T] | null }>) => void) {
-    this.events.addEventListener(type, handler)
+    this.events.addEventListener(type, handler as EventListener)
 
     // Returning the off function to disable the event
     return () => {
-      this.events.removeEventListener(type, handler)
+      this.events.removeEventListener(type, handler as EventListener)
     }
   }
 
   once<T extends ImageFormat>(type: 'start' | 'finish', handler: (event: CustomEvent<{ tileRenderer: TileRenderer, tileIndex: TileIndex, tileImage: ImageFormatMap[T] | null }>) => void) {
-    this.events.addEventListener(type, handler, { once: true })
+    this.events.addEventListener(type, handler as EventListener, { once: true })
   }
 
   private emit<T extends ImageFormat>(type: 'start' | 'finish', detail: { tileRenderer: TileRenderer, tileIndex: TileIndex, tileImage: ImageFormatMap[T] | null }) {
@@ -127,21 +120,14 @@ export class TileRenderer {
   }
 
 
-  private allSourcesLoaded(): boolean {
-    const style = this.map.getStyle()
-    const sourceIds = Object.keys(style.sources)
-    return sourceIds.filter(id => !this.map.isSourceLoaded(id)).length === 0
-  }
-
-  private getUnloadedSource(): string[] {
-    const style = this.map.getStyle()
-    const sourceIds = Object.keys(style.sources)
-    return sourceIds.filter(id => !this.map.isSourceLoaded(id))
-  }
-
   private getImageAsPixelData(): PixelData {
     const canvas = this.map.getCanvas()
     const gl = canvas.getContext('webgl2')
+
+    if (!gl) {
+      throw Error("Could not get WebGL2 context from canvas.")
+    }
+
     const pixelData = new Uint8Array(canvas.width * canvas.height * 4)
     gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixelData)
     return { data: pixelData, width: canvas.width, height: canvas.height }
@@ -163,6 +149,11 @@ export class TileRenderer {
     const imageData = this.getImageAsImageData()
     const canvas = new OffscreenCanvas(imageData.width, imageData.height)
     const ctx = canvas.getContext("2d")
+
+    if (!ctx) {
+      throw Error("Could not get 2D context from canvas.")
+    }
+
     ctx.putImageData(imageData, 0, 0)
     return canvas
   }

@@ -1,20 +1,43 @@
 {
   "name": "@geoblocks/maplibre-tile-factory",
-  "private": true,
-  "version": "0.0.0",
+  "private": false,
+  "version": "0.1.0",
   "type": "module",
+  "types": "dist-lib/maplibre-tile-factory.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist-lib/maplibre-tile-factory.js",
+      "types": "./dist-lib/maplibre-tile-factory.d.ts"
+    }
+  },
+  "author": "Jonathan Lurie",
+  "homepage": "https://github.com/geoblocks/maplibre-tile-factory",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/geoblocks/maplibre-tile-factory.git"
+  },
+  "keywords": [
+    "maplibre",
+    "webgl",
+    "custom-layer",
+    "dataviz"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:lib": "rm -rf ./dist-lib/* && tsc && vite build -c vite.config-lib.ts",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/node": "^25.6.0",
     "typescript": "~6.0.2",
-    "vite": "^8.0.4"
+    "vite": "^8.0.4",
+    "vite-plugin-dts": "^5.0.0",
+    "basemapkit": "^0.5.1",
+    "pmtiles": "^4.4.1"
   },
   "dependencies": {
-    "basemapkit": "^0.5.1",
-    "maplibre-gl": "^5.23.0",
-    "pmtiles": "^4.4.1"
+    "maplibre-gl": "^5.23.0"
   }
 }

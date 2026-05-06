@@ -1,6 +1,6 @@
 import { Queue } from "./Queue";
 import { TileRenderer, type ImageFormat, type ImageFormatMap } from "./TileRenderer";
-import { isSameTileIndex } from "./tools";
+import { isSameTileIndex, wrapTileIndex } from "./tools";
 import type { TileIndex } from "./types";
 
 
@@ -25,6 +25,12 @@ export type TileFactoryOptions = {
    * Default: 1000
    */
   timeout?: number,
+
+  /**
+   * Tile size in pixels. Must be a power of 2 or will be set to the upper power of 2.
+   * Default: 512
+   */
+  tileSize?: number,
 }
 
 export class TileFactory {
@@ -41,7 +47,7 @@ export class TileFactory {
 
 
     for (let i = 0; i < numberOfRenderers; i += 1) {
-      const tileRenderer = new TileRenderer(style)
+      const tileRenderer = new TileRenderer(style, { tileSize: options.tileSize })
 
       tileRenderer.on('start', e => {
         this.emit('start', { tileIndex: e.detail.tileIndex, tileImage: e.detail.tileImage })
@@ -59,11 +65,12 @@ export class TileFactory {
   }
 
   on<T extends ImageFormat>(type: 'start' | 'finish', handler: (event: CustomEvent<{ tileIndex: TileIndex, tileImage: ImageFormatMap[T] | null }>) => void) {
-    this.events.addEventListener(type, handler);
+    const listener = handler as EventListener;
+    this.events.addEventListener(type, listener);
 
     // Returning the off function to disable the event
     return () => {
-      this.events.removeEventListener(type, handler)
+      this.events.removeEventListener(type, listener)
     }
   }
 
@@ -105,13 +112,18 @@ export class TileFactory {
 
 
   requestTile<T extends ImageFormat>(tileIndex: TileIndex): Promise<ImageFormatMap[T] | null> {
-    this.queue.enqueue(tileIndex)
+    const wrappedTileIndex = wrapTileIndex(tileIndex)
+    if(!wrappedTileIndex) {
+      return Promise.resolve(null)
+    }
 
-    const tileImagePromise = new Promise<ImageFormatMap[T]>((resolve, reject) => {
+    this.queue.enqueue(wrappedTileIndex)
+
+    const tileImagePromise = new Promise<ImageFormatMap[T]>((resolve) => {
       const removeEventFunc = this.on('finish', (e) => {
         const finishedTileIndex = e.detail.tileIndex
 
-        if (isSameTileIndex(finishedTileIndex, tileIndex)) {
+        if (isSameTileIndex(finishedTileIndex, wrappedTileIndex)) {
           removeEventFunc()
           resolve(e.detail.tileImage as ImageFormatMap[T])
         }
