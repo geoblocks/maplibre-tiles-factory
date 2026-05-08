@@ -12,6 +12,7 @@ import { register } from "ol/proj/proj4.js";
 import proj4 from "proj4";
 import { TileFactory } from "../lib";
 import OSM from "ol/source/OSM";
+import TileDebug from "ol/source/TileDebug.js";
 
 export function olDemo() {
   maplibregl.addProtocol("pmtiles", new Protocol().tile);
@@ -31,9 +32,10 @@ export function olDemo() {
 
   const tileFactory = new TileFactory(style, {
     imageFormat: "ImageBitmap",
-    numberOfRenderers: 6,
+    numberOfRenderers: 3,
     tileSize: TILE_SIZE * DPR, // Physical pixels: 1024 on 4K with 512 logical
     timeout: 30000,
+    parentElement: document.getElementById("tiles-debug"),
   });
 
   // Register LV95
@@ -104,6 +106,13 @@ export function olDemo() {
       new TileLayer({
         source: source3857,
         opacity: 1,
+      }),
+
+      new TileLayer({
+        source: new TileDebug({
+          projection: "EPSG:3857",
+          tileGrid: mercatorGrid,
+        }),
       }),
     ],
     view: new View({

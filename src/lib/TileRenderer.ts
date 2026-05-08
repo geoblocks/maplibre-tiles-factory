@@ -3,8 +3,6 @@ import type { PixelData, TileIndex } from "./types";
 import { getTileBounds } from "./tools";
 import "ol/ol.css";
 
-const SYSTEM_TILE_SIZE = 512;
-
 export type ImageFormatMap = {
   PixelData: PixelData;
   ImageData: ImageData;
@@ -17,24 +15,20 @@ export type ImageFormatMap = {
 
 export type TileRendererOptions = {
   tileSize?: number;
+  parentElement?: HTMLElement | null;
+  showTileBoundaries?: boolean;
 };
 
 export type ImageFormat = keyof ImageFormatMap;
 
 let tileRendererCounter = 0;
 
-function createMapContainer(): HTMLDivElement {
+function createMapContainer(parent: HTMLElement, width: number, height: number): HTMLDivElement {
   const container = document.createElement("div");
-  container.style.setProperty("width", `${SYSTEM_TILE_SIZE}px`);
-  container.style.setProperty("height", `${SYSTEM_TILE_SIZE}px`);
-
-  container.style.setProperty("top", "-5000px");
-  container.style.setProperty("left", "-5000px");
-
+  container.style.setProperty("width", `${width}px`);
+  container.style.setProperty("height", `${height}px`);
   container.id = `_maplibre-tile-factory-container-${tileRendererCounter++}_`;
-  container.style.setProperty("position", "fixed");
-
-  document.body.append(container);
+  parent.append(container);
   return container;
 }
 
@@ -44,23 +38,47 @@ export class TileRenderer {
   private readonly events = new EventTarget();
 
   constructor(style: maplibregl.StyleSpecification, options: TileRendererOptions = {}) {
+    const SYSTEM_TILE_SIZE = 512;
     const tileSize = options.tileSize ?? SYSTEM_TILE_SIZE;
     const devicePixelRatio = tileSize / SYSTEM_TILE_SIZE;
+    const parentElement = options.parentElement || this.createParentElement();
 
     this.idle = true;
     this.map = new maplibregl.Map({
-      container: createMapContainer(),
+      container: createMapContainer(parentElement, SYSTEM_TILE_SIZE, SYSTEM_TILE_SIZE),
       hash: false,
       style: style,
       pixelRatio: devicePixelRatio,
+      interactive: false,
+      attributionControl: false,
+      maplibreLogo: false,
+      scrollZoom: false,
+      anisotropicFilterPitch: 0,
+      renderWorldCopies: false,
+      fadeDuration: 0,
+      // crossSourceCollisions: false, // to check if OK to use
+      refreshExpiredTiles: false,
+      validateStyle: false,
+      trackResize: false,
+      collectResourceTiming: false,
+      // maxCanvasSize: [512, 512],
       canvasContextAttributes: {
+        contextType: "webgl2",
         preserveDrawingBuffer: true,
         antialias: false,
       },
     });
 
-    // TODO: remove
-    this.map.showTileBoundaries = false;
+    this.map.showTileBoundaries = !!options.showTileBoundaries;
+  }
+
+  private createParentElement(): HTMLDivElement {
+    const container = document.createElement("div");
+    container.style.setProperty("top", "-5000px");
+    container.style.setProperty("left", "-5000px");
+    container.style.setProperty("position", "fixed");
+    document.body.append(container);
+    return container;
   }
 
   on<T extends ImageFormat>(
@@ -103,8 +121,6 @@ export class TileRenderer {
 
   private async fitTileBounds(tileIndex: TileIndex, timeout = 1000) {
     const tileBounds = getTileBounds(tileIndex);
-    this.map.setBearing(0);
-    this.map.setPitch(0);
 
     this.map.fitBounds(
       [
@@ -112,7 +128,7 @@ export class TileRenderer {
         [tileBounds.lngMax, tileBounds.latMax],
       ],
       {
-        duration: 0,
+        animate: false,
       },
     );
 
@@ -121,12 +137,14 @@ export class TileRenderer {
 
   private async isIdleOrTimeout(timeout: number): Promise<{ didTimeout: boolean }> {
     return new Promise((resolve) => {
+      let clearId: number;
       const resolveWhenIdle = () => {
+        clearTimeout(clearId);
         resolve({ didTimeout: false });
       };
       this.map.on("idle", resolveWhenIdle);
 
-      setTimeout(() => {
+      clearId = setTimeout(() => {
         this.map.off("idle", resolveWhenIdle);
         resolve({ didTimeout: true });
       }, timeout);
@@ -170,8 +188,7 @@ export class TileRenderer {
   }
 
   private getImageAsImageBitmap(): Promise<ImageBitmap> {
-    const imageData = this.getImageAsImageData();
-    return createImageBitmap(imageData);
+    return createImageBitmap(this.map.getCanvas());
   }
 
   private getImageAsOffscreenCanvas(): OffscreenCanvas {
