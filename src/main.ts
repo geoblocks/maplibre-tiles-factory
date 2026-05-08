@@ -3,4 +3,4 @@ import { olDemo } from "./demos/ol";
 
 // basicDemo();
 
-olDemo();
+olDemo().catch(console.error);
