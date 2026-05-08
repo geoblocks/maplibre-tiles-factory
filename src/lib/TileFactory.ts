@@ -28,6 +28,11 @@ export type TileFactoryOptions = {
    * Default: 512
    */
   tileSize?: number;
+
+  /**
+   * A container attached to the DOM where to render tiles.
+   */
+  parentElement?: HTMLElement | null;
 };
 
 export class TileFactory {
@@ -43,7 +48,10 @@ export class TileFactory {
     const numberOfRenderers = options.numberOfRenderers ?? 4;
 
     for (let i = 0; i < numberOfRenderers; i += 1) {
-      const tileRenderer = new TileRenderer(style, { tileSize: options.tileSize });
+      const tileRenderer = new TileRenderer(style, {
+        tileSize: options.tileSize,
+        parentElement: options.parentElement,
+      });
 
       tileRenderer.on("start", (e) => {
         this.emit("start", { tileIndex: e.detail.tileIndex, tileImage: e.detail.tileImage });

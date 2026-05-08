@@ -111,10 +111,30 @@ code {
 #map {
   position: absolute;
   width: 100vw;
-  height: 100dvh;
+  height: calc(100dvh - 512px);
   top: 0;
   bottom: 0;
   right: 0;
   left: 0;
   margin: 0;
+}
+
+#tiles-debug {
+  position: absolute;
+  width: 100vw;
+  height: 512;
+  top: calc(100dvh - 512px);
+  bottom: 0;
+  right: 0;
+  left: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+#tiles-debug .maplibregl-control-container {
+  display: none;
+}
+
+#tiles-debug .maplibregl-map {
+  display: inline-block;
 }
