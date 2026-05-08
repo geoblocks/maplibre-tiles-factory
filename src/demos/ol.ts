@@ -25,9 +25,7 @@ const SOURCES: Record<string, () => Promise<maplibregl.StyleSpecification>> = {
       terrain: { pmtiles: pmtilesTerrain, hillshading: true, encoding: terrainEncoding },
     }),
   "Swisstopo Light": async () => {
-    const response = await fetch(
-      "https://vectortiles.geo.admin.ch/styles/ch.swisstopo.lightbasemap.vt/style.json",
-    );
+    const response = await fetch("https://vectortiles.geo.admin.ch/styles/ch.swisstopo.lightbasemap.vt/style.json");
     return response.json();
   },
 };
