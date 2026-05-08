@@ -1,4 +1,4 @@
-import maplibregl from "maplibre-gl";
+import type maplibregl from "maplibre-gl";
 import ImageTileSource from "ol/source/ImageTile.js";
 import { createXYZ } from "ol/tilegrid.js";
 import type { Projection } from "ol/proj.js";
