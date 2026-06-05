@@ -119,14 +119,17 @@ export class TileRenderer {
     await this.isIdleOrTimeout(timeout);
   }
 
-  private async isIdleOrTimeout(timeout: number): Promise<{ didTimeout: boolean }> {
+  private isIdleOrTimeout(timeout: number): Promise<{ didTimeout: boolean }> {
     return new Promise((resolve) => {
+      let timer: ReturnType<typeof setTimeout>;
+
       const resolveWhenIdle = () => {
+        clearTimeout(timer);
         resolve({ didTimeout: false });
       };
-      this.map.on("idle", resolveWhenIdle);
+      this.map.once("idle", resolveWhenIdle);
 
-      setTimeout(() => {
+      timer = setTimeout(() => {
         this.map.off("idle", resolveWhenIdle);
         resolve({ didTimeout: true });
       }, timeout);
