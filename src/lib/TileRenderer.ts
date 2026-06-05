@@ -53,6 +53,7 @@ export class TileRenderer {
       hash: false,
       style: style,
       pixelRatio: devicePixelRatio,
+      fadeDuration: 0,
       canvasContextAttributes: {
         preserveDrawingBuffer: true,
         antialias: false,
